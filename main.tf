@@ -1,40 +1,45 @@
-#Execute this first time before running "gcloud auth application-default login"
 provider "google" {
-  credentials = file("hybrid-life-319008-5e7bd073512b.json")
-  project     = "hybrid-life-319008"
+  credentials = file("optical-weft-321006-d44f20dcc73f.json")
+  project     = "optical-weft-321006"
   region      = "us-west1"
   zone        = "us-west1-b"
 
 }
-
-
-module "network" {
-    
-    source = "terraform-google-modules/network/google"
-#    version = "~> 3.3.0"
-    network_name = "vpc-network-terraform"
-        project_id = var.project
-
-    subnets = [
-        {
-            subnet_name = "subnet-01"
-            subnet_ip = var.cidr
-            subnet_region = var.region
-        }
-    ]
-
-    secondary_ranges = {
-        subnet-01 = []
-    }
+resource "google_service_account" "service_account" {
+  account_id   = "custom-terraform"
+  display_name = "custom-terraform"
 }
 
-module "net-firewall" {
-  source                  = "terraform-google-modules/network/google//modules/fabric-net-firewall"
-#  version = "~> 1.3.0"
-  project_id              = var.project
-  network                 = module.network.network_name
- internal_ranges_enabled = true
- internal_ranges = ["10.0.0.0/16"]
-
+resource "google_service_account_iam_member" "admin-account-iam" {
+  service_account_id = google_service_account.service_account.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "user:hasanatizaz@gmail.com"
 }
 
+resource "google_project_iam_custom_role" "terraform-custom-role" {
+  role_id     = "mycustomterraformroles"
+  title       = "Terraform Custom"
+  description = "Role Created through terraform"
+  permissions = ["apikeys.keys.create", "apikeys.keys.delete"]
+}
+resource "google_project_iam_binding" "terraform-binding" {
+project = "optical-weft-321006"
+role = "projects/optical-weft-321006/roles/${google_project_iam_custom_role.terraform-custom-role.role_id}"
+  members = [
+    "serviceAccount:terraform@optical-weft-321006.iam.gserviceaccount.com",
+  ]
+}
+
+
+resource "google_service_account" "service_accounts" {
+  account_id   = "custom-terraform3"
+  display_name = "custom-terraform3"
+}
+
+resource "google_project_iam_binding" "terraform-bindings" {
+project = "optical-weft-321006"
+role = "roles/compute.viewer"
+  members = [
+      "serviceAccount:custom-terraform3@optical-weft-321006.iam.gserviceaccount.com",
+  ]
+}
